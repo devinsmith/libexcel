@@ -6,7 +6,7 @@ BUILDING
 Simply change to the src directory and execute make (or gmake on BSD
 systems). BSD make is currently not supported you must use GNU make.
 
-This build a static library called libexcel.a
+This will build a static library called libexcel.a
 You can then change into the tests directory to build some sample apps that
 utilize the library.
 
