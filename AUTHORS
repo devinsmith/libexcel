@@ -1,0 +1,8 @@
+Devin Smith <devin@devinsmith.net>
+
+libexcel was based on John McNamara's (jmcnamara@cpan.org) wonderful Perl
+Spreadsheet-WriteExcel module.
+
+The packet stream code is Copyright (C) 2003-2005, Claudio Leite and from the
+bsflite AIM client.
+

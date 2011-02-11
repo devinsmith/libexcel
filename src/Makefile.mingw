@@ -1,0 +1,36 @@
+# Makefile for libexcel.
+
+.PHONY: all clean
+
+SRCS = biffwriter.c hashhelp.c worksheet.c format.c olewriter.c \
+			 stream.c workbook.c
+
+OBJS = $(SRCS:.c=.o)
+
+CC = gcc
+AR = ar
+
+INTERNAL_CFLAGS = -Wall -I../include
+CPPFLAGS += -MMD -MP -MT $@
+CFLAGS= -O2 -pipe
+
+LIB = libexcel
+STATIC_LIB = libexcel.a
+
+all: $(LIB)
+
+$(LIB): $(STATIC_LIB)
+
+$(STATIC_LIB): $(OBJS)
+	$(AR) cru $(STATIC_LIB) $(OBJS)
+	ranlib $(STATIC_LIB)
+
+clean:
+	del $(OBJS) $(STATIC_LIB)
+	del *.d
+
+.c.o:
+	$(CC) $(INTERNAL_CFLAGS) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
+
+# Include automatically generated dependency files
+-include $(wildcard *.d)

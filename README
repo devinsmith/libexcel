@@ -1,0 +1,15 @@
+libexcel is a C based library for creating Excel XLS spreadsheets.
+It is heavily based on Spreadsheet::WriteExcel by John McNamara.
+
+BUILDING
+===========================================================================
+Simply change to the src directory and execute make (or gmake on BSD
+systems). BSD make is currently not supported you must use GNU make.
+
+This build a static library called libexcel.a
+You can then change into the tests directory to build some sample apps that
+utilize the library.
+
+On Windows you can use mingw32 or the lcc-win32 compiler system.
+You may need to alter the makefile to set paths to your compiler.
+
