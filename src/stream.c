@@ -44,104 +44,6 @@
 
 #define MAX_SIZE	16384
 
-/* Packet reader interface */
-struct pkt_rdr * pkt_rdr_init(unsigned char *data, size_t len)
-{
-	struct pkt_rdr *r = NULL;
-
-	r = malloc((size_t) sizeof(struct pkt_rdr));
-	if (r == NULL) return NULL;
-
-	r->data = data;
-	r->len = len;
-	r->offset = 0;
-
-	return r;
-}
-
-void pkt_advance_offset(struct pkt_rdr *r, int adv)
-{
-	r->offset += adv;
-}
-
-uint8_t pkt_get8(struct pkt_rdr *r)
-{
-	return r->data[r->offset++];
-}
-
-uint16_t pkt_get16_le(struct pkt_rdr *r)
-{
-	uint16_t ret;
-
-	ret = r->data[r->offset++];
-	ret += r->data[r->offset++] << 8;
-
-	return ret;
-}
-
-uint16_t pkt_get16(struct pkt_rdr *r)
-{
-	uint16_t ret;
-
-	ret = r->data[r->offset++] << 8;
-	ret += r->data[r->offset++];
-
-	return ret;
-}
-
-uint32_t pkt_get32_le(struct pkt_rdr *r)
-{
-	uint32_t ret;
-
-	ret = r->data[r->offset++];
-	ret += r->data[r->offset++] << 8;
-	ret += r->data[r->offset++] << 16;
-	ret += r->data[r->offset++] << 24;
-
-	return ret;
-}
-
-//uint32_t pkt_get32(struct pkt_rdr *r)
-//{
-//	uint32_t ret;
-
-	//ret = htonl(*((uint32_t *) &r->data[r->offset]));
-//	r->offset += 4;
-
-//	return ret;
-//}
-
-int pkt_getstring(struct pkt_rdr *r, int len, char *str)
-{
-	if (str == NULL)
-		return -1;
-
-	strncpy(str, (char *) r->data + r->offset, len - 1);
-	str[len - 1] = '\0';
-
-	r->offset += len;
-
-	return len;
-}
-
-int pkt_getdata(struct pkt_rdr *r, int len, unsigned char *data)
-{
-	if (data == NULL)
-		return -1;
-
-	memcpy(data, r->data + r->offset, len);
-
-	r->offset += len;
-
-	return len;
-}
-
-void pkt_rdr_free(struct pkt_rdr *r)
-{
-	if (r == NULL) return;
-	free(r);
-}
-
 struct pkt *
 pkt_init(size_t len, int type)
 {
@@ -225,17 +127,6 @@ void pkt_add32(struct pkt *p, uint32_t val)
 	p->len += 4;
 }
 
-void pkt_ber_write_data_len(struct pkt *p)
-{
-	uint32_t len;
-
-	/* Length is 5 bytes less than p->len because it does not contain
-	 * the length bytes themselves. */
-	len = p->len - 5;
-	p->data[3] = (len & 0xff00) >> 8;
-	p->data[4] = (len & 0xff);
-}
-
 void pkt_free(struct pkt * p)
 {
 	if (p == NULL) return;
@@ -244,15 +135,5 @@ void pkt_free(struct pkt * p)
 		free(p->data);
 	}
 	free(p);
-}
-
-void pkt_ber_write_data(struct pkt *p, unsigned char ber_tag, int len, int data)
-{
-	pkt_add8(p, ber_tag);
-	pkt_add8(p, len);
-
-	while (len-- > 0) {
-		pkt_add8(p, (data >> (8 * len)) & 0xff);
-	}
 }
 

@@ -57,20 +57,7 @@ struct pkt_rdr
 	int offset;
 };
 
-/* packet reader functions */
-struct pkt_rdr * pkt_rdr_init(unsigned char *data, size_t len);
-void pkt_advance_offset(struct pkt_rdr *r, int adv);
-uint8_t pkt_get8(struct pkt_rdr *r);
-uint16_t pkt_get16_le(struct pkt_rdr *r);
-uint16_t pkt_get16(struct pkt_rdr *r);
-uint32_t pkt_get32_le(struct pkt_rdr *r);
-uint32_t pkt_get32(struct pkt_rdr *r);
-int pkt_getstring(struct pkt_rdr *r, int len, char *str);
-int pkt_getdata(struct pkt_rdr *r, int len, unsigned char *data);
-void pkt_rdr_free(struct pkt_rdr *r);
-
 /* packet creation functions */
-struct pkt * pkt_tpkt_init(size_t len, int type);
 void pkt_addraw(struct pkt *p, const unsigned char *bytes, size_t len);
 void pkt_addzero(struct pkt *p, int num_zeros);
 void pkt_add8(struct pkt *p, uint8_t val);
@@ -81,15 +68,6 @@ void pkt_add32_le(struct pkt *p, uint32_t val);
 void pkt_write_data_len(struct pkt *p);
 void pkt_addstring(struct pkt *p, const char *bytes);
 void pkt_free(struct pkt * p);
-
-/* BER specific routines */
-struct pkt * pkt_ber_init(size_t len, int type, uint16_t magic_tag);
-void pkt_ber_write_data(struct pkt *p, unsigned char ber_tag, int len, int data);
-void pkt_ber_write_data_len(struct pkt *p);
-
-/* Generic routines */
-struct pkt * pkt_generic_init(size_t len, int type, uint16_t magic);
-void pkt_generic_write_data_len(struct pkt *p);
 
 /* Raw routines */
 struct pkt * pkt_init(size_t len, int type);
