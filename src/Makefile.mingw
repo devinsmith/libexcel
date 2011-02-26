@@ -2,7 +2,7 @@
 
 .PHONY: all clean
 
-SRCS = biffwriter.c hashhelp.c worksheet.c format.c olewriter.c \
+SRCS = biffwriter.c hashhelp.c worksheet.c format.c formula.c olewriter.c \
 			 stream.c workbook.c
 
 OBJS = $(SRCS:.c=.o)
