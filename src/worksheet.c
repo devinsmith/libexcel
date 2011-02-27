@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "formula.h"
 #include "worksheet.h"
 #include "stream.h"
 
@@ -340,6 +341,63 @@ int xls_writef_number(struct wsheetctx *xls, int row, int col, double num, struc
     reverse(xl_double, sizeof(xl_double));
 
   pkt_addraw(pkt, xl_double, sizeof(xl_double));
+  biff->append(biff, pkt->data, pkt->len);
+  pkt_free(pkt);
+
+  return 0;
+}
+
+/* Write a double to the specified row and column (zero indexed).
+ * An integer can be written as a double.  Excel will display an integer.
+ * This writes the Excel NUMBER record to the worksheet. (BIFF3-BIFF8) */
+int wsheet_writef_formula(struct wsheetctx *xls, int row, int col, char *formula, struct xl_format *fmt)
+{
+  uint16_t name = 0x0006; /* Record identifier */
+  uint16_t length = 0x0016; /* Number of bytes to follow */
+  uint16_t xf; /* The cell format */
+  struct pkt *pkt;
+  struct pkt *formpkt;
+  struct bwctx *biff = (struct bwctx *)xls;
+  int formlen;
+  double zero = 0;
+  unsigned char xl_double[8];
+
+  if (row >= xls->xls_rowmax) { return -2; }
+  if (col >= xls->xls_colmax) { return -2; }
+  if (row < xls->dim_rowmin) { xls->dim_rowmin = row; }
+  if (row > xls->dim_rowmax) { xls->dim_rowmax = row; }
+  if (col < xls->dim_colmin) { xls->dim_colmin = col; }
+  if (col > xls->dim_colmax) { xls->dim_colmax = col; }
+
+  xf = wsheet_xf(fmt);
+
+  formpkt = pkt_init(0, VARIABLE_PACKET);
+  process_formula(formula, formpkt);
+  formlen = formpkt->len;
+
+  pkt = pkt_init(0, VARIABLE_PACKET);
+  /* Write header */
+  pkt_add16_le(pkt, name);
+  pkt_add16_le(pkt, length + formlen);
+
+  /* Write data */
+  pkt_add16_le(pkt, row);
+  pkt_add16_le(pkt, col);
+  pkt_add16_le(pkt, xf);
+
+  /* Write the number */
+  memcpy(xl_double, &zero, sizeof(xl_double));
+  if (biff->byte_order)
+    reverse(xl_double, sizeof(xl_double));
+
+  pkt_addraw(pkt, xl_double, sizeof(xl_double));
+  pkt_add16_le(pkt, 0x03); /* Option flags */
+  pkt_add32_le(pkt, 0); /* Reserved */
+  pkt_add16_le(pkt, formlen);
+
+  /* The formula */
+  pkt_addraw(pkt, formpkt->data, formpkt->len);
+
   biff->append(biff, pkt->data, pkt->len);
   pkt_free(pkt);
 

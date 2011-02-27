@@ -70,6 +70,7 @@ int xls_write_string(struct wsheetctx *xls, int row, int col, char *str);
 int xls_writef_string(struct wsheetctx *xls, int row, int col, char *str, struct xl_format *fmt);
 int xls_writef_number(struct wsheetctx *xls, int row, int col, double num, struct xl_format *fmt);
 int xls_write_blank(struct wsheetctx *xls, int row, int col, struct xl_format *fmt);
+int wsheet_writef_formula(struct wsheetctx *xls, int row, int col, char *formula, struct xl_format *fmt);
 int wsheet_write_url(struct wsheetctx *wsheet, int row, int col, char *url, char *str, struct xl_format *fmt);
 void wsheet_close(struct wsheetctx *xls);
 unsigned char *wsheet_get_data(struct wsheetctx *ws, size_t *sz);
