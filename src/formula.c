@@ -14,12 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <sys/queue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "bsdqueue.h"
 #include "formula.h"
 #include "stream.h"
 
@@ -52,6 +52,16 @@ struct token {
 /* Declaration type */
 TAILQ_HEAD(token_list, token);
 
+struct xl_functions {
+  char *name;
+  int code;
+  int argc;
+};
+
+struct xl_functions biff5_funcs[] = {
+  {"SUM", 4, -1}
+};
+
 #ifdef FORMULA_DEBUG
 static void dump_hex(void *vp, int length);
 #endif
@@ -60,12 +70,10 @@ int is_func(char *func)
 {
   int num_funcs;
   int i;
-  char *funcs[] = { "AVERAGE", "IF", "SIN", "SUM", "PI"
-  };
 
-  num_funcs = sizeof(funcs) / sizeof(funcs[0]);
+  num_funcs = sizeof(biff5_funcs) / sizeof(biff5_funcs[0]);
   for (i = 0; i < num_funcs; i++) {
-    if (strcmp(func, funcs[i]) == 0)
+    if (strcmp(func, biff5_funcs[i].name) == 0)
       return 1;
   }
   return 0;
@@ -265,19 +273,57 @@ void encode_number(struct pkt *pkt, const char *data)
     pkt_add16_le(pkt, number);
 }
 
+void encode_function(struct pkt *pkt, const char *data, const int argc)
+{
+  int num_funcs;
+  int i;
+
+  num_funcs = sizeof(biff5_funcs) / sizeof(biff5_funcs[0]);
+  for (i = 0; i < num_funcs; i++) {
+    if (strcmp(data, biff5_funcs[i].name) == 0)
+      break;
+  }
+  if (i == num_funcs) {
+    /* This should never happen!! */
+    return;
+  }
+
+  if (biff5_funcs[i].argc >= 0) {
+    pkt_add8(pkt, 0x41);
+  } else {
+    pkt_add8(pkt, 0x42);
+    pkt_add8(pkt, argc);
+  }
+  pkt_add16_le(pkt, biff5_funcs[i].code);
+}
+
 /* Based on code from:
  * http://en.wikipedia.org/wiki/Shunting-yard_algorithm */
 int parse_token_list(struct token_list *tlist, struct pkt *pkt)
 {
   struct token *token;
   struct token *stack[32];
+  int func_argc[32]; /* Record arg counts of functions */
+  unsigned int fl;  /* Function length */
   unsigned int sl;  /* Stack length */
   struct token *sctoken;
 
   sl = 0;
+  fl = 0;
+  func_argc[fl] = 0;
+  /* Process one token at a time */
   TAILQ_FOREACH(token, tlist, tokens) {
+    /* if it's a number encode it right away */
     if (token->type == TOKEN_NUMBER) {
       encode_number(pkt, token->data);
+      func_argc[fl]++;
+    }
+    /* If it's a function push it onto the stack */
+    else if (token->type == TOKEN_FUNCTION) {
+      stack[sl] = token;
+      ++sl;
+      fl++;
+      func_argc[fl] = 0;
     } else if (token->type == TOKEN_OPERATOR) {
       while (sl > 0) {
         sctoken = stack[sl - 1];
@@ -300,6 +346,51 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
       /* Push operator onto the stack */
       stack[sl] = token;
       ++sl;
+    }
+    /* If the token is a left parenthesis, then push it onto the stack. */
+    else if (token->type == TOKEN_LPAREN) {
+      stack[sl] = token;
+      ++sl;
+    }
+    /* If the token is a right parenthesis: */
+    else if (token->type == TOKEN_RPAREN) {
+      int pe = 0;
+      /* Until the token at the top of the stack is a left parenthesis,
+       * pop operators off the stack onto the output queue */
+      while (sl > 0) {
+        sctoken = stack[sl - 1];
+        if (sctoken->type == TOKEN_LPAREN) {
+          pe = 1;
+          break;
+        }
+        else  {
+          printf("Need to encode for function!\n");
+//          *outpos = sc;
+  //        ++outpos;
+          sl--;
+        }
+      }
+      /* If the stack runs out without finding a left parenthesis, then there
+       * are mismatched parentheses. */
+      if (!pe) {
+        printf("Error: parentheses mismatched\n");
+        return -1;
+      }
+      /* Pop the left parenthesis from the stack, but not onto the output queue. */
+      sl--;
+      /* If the token at the top of the stack is a function token, pop it onto
+       * the output queue. */
+      if (sl > 0) {
+        sctoken = stack[sl - 1];
+        if (sctoken->type == TOKEN_FUNCTION) {
+          printf("Arg count for function: %d\n", func_argc[fl]);
+          encode_function(pkt, sctoken->data, func_argc[fl]);
+          //*outpos = sc;·
+          //++outpos;
+          sl--;
+          fl--;
+        }
+      }
     }
   }
 

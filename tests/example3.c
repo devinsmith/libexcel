@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 
   xls_writef_string(one, 0, 0, "Formula examples", fmt);
   wsheet_writef_formula(one, 1, 1, "=2+3*4", NULL);
+  wsheet_writef_formula(one, 1, 2, "=SUM(2,9)", NULL);
 
   wbook_close(wbook);
   wbook_destroy(wbook);
