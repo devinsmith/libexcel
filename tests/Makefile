@@ -11,6 +11,9 @@ OBJS2 = $(SRCS2:.c=.o)
 SRCS3 = merge1.c
 OBJS3 = $(SRCS3:.c=.o)
 
+SRCS4 = example3.c
+OBJS4 = $(SRCS4:.c=.o)
+
 CC = gcc
 AR = ar
 
@@ -21,9 +24,9 @@ CFLAGS= -O2 -pipe
 EXE1 = example1
 EXE2 = example2
 EXE3 = merge1
+EXE4 = example3
 
-OBJS = $(OBJS1) $(OBJS2) $(OBJS3)
-EXES = $(EXE1) $(EXE2) $(EXE3)
+EXES = $(EXE1) $(EXE2) $(EXE3) $(EXE4)
 
 all: $(EXES)
 
@@ -34,7 +37,10 @@ $(EXE2): $(OBJS2) ../src/libexcel.a
 	$(CC) -O2 -o $(EXE2) $(OBJS2) ../src/libexcel.a
 
 $(EXE3): $(OBJS3) ../src/libexcel.a
-	$(CC) -g3 -o $(EXE3) $(OBJS3) ../src/libexcel.a
+	$(CC) -O2 -o $(EXE3) $(OBJS3) ../src/libexcel.a
+
+$(EXE4): $(OBJS4) ../src/libexcel.a
+	$(CC) -O2 -o $(EXE4) $(OBJS4) ../src/libexcel.a
 
 clean:
 	rm -f *.o $(EXES)
