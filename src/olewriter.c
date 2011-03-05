@@ -266,7 +266,7 @@ void ow_write_property_storage(struct owctx *ow)
   int booksize = ow->booksize;
 
   ow_write_pps(ow, "Root Entry", 0x05, 1, -2, 0x00);
-  ow_write_pps(ow, "Book", 0x02, -1, 0x00, booksize);
+  ow_write_pps(ow, "Workbook", 0x02, -1, 0x00, booksize);
   ow_write_pps(ow, NULL, 0x00, -1, 0x00, 0x0000);
   ow_write_pps(ow, NULL, 0x00, -1, 0x00, 0x0000);
 }
