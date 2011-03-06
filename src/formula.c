@@ -56,10 +56,12 @@ struct xl_functions {
   char *name;
   int code;
   int argc;
+  int class;
 };
 
 struct xl_functions biff5_funcs[] = {
-  {"SUM", 4, -1}
+  {"SUM", 4, -1, 0},
+  {"ABS", 24, 1, 1}
 };
 
 #ifdef FORMULA_DEBUG
@@ -255,8 +257,15 @@ void encode_operator(struct pkt *pkt, const char op)
   case '+':
     pkt_add8(pkt, 0x03); /* tAdd */
     break;
+  case '-':
+    pkt_add8(pkt, 0x04); /* tSub */
+    break;
   case '*':
     pkt_add8(pkt, 0x05); /* tMul */
+    break;
+  case '/':
+    pkt_add8(pkt, 0x06); /* tDiv */
+    break;
   }
 }
 
@@ -271,6 +280,89 @@ void encode_number(struct pkt *pkt, const char *data)
     pkt_add8(pkt, 0x13); /* tUminus */
   } else
     pkt_add16_le(pkt, number);
+}
+
+/* Convert a cell in A1 notation to 0 based row/column notation:
+ * Examples: $A$1 -> 0, 0
+ * Returns: row, col, row_rel, col_rel
+ */
+int parse_A1(const char *cell, int *row_out, int *col_out, int *row_rel, int *col_rel)
+{
+  int i;
+  int mul;
+  int col;
+  int row;
+  int col_absolute;
+  int row_absolute;
+  int row_start;
+
+  col_absolute = 0;
+  row_absolute = 0;
+  /* Check if the first character is a $. If the $ is present, then the
+   * column is an absolute position. If it is missing the column is
+   * relative. */
+  if (cell[0] == '$') {
+    col_absolute = 1;
+  }
+
+  /* Scan through the cell string looking for a $ or [0-9] */
+  row_start = strcspn(cell + col_absolute, "$0123456789") + col_absolute;
+  if (row_start == strlen(cell)) {
+    printf("Invalid\n");
+    return -1;
+  }
+
+  if (cell[row_start] == '$') {
+    row_absolute = 1;
+    row_start++;
+  }
+
+  mul = 0;
+  col = 0;
+  for (i = row_start - 1 - row_absolute; i >= col_absolute; i--) {
+    if (mul == 0)
+      col += (cell[i] - 65);
+    else
+      col += (mul * 26 * (cell[i] - 64));
+    mul++;
+  }
+
+  row = strtol(cell + row_start, NULL, 10);
+  row--;
+
+  if (row_out)
+    *row_out = row;
+  if (col_out)
+    *col_out = col;
+  if (row_rel)
+    *row_rel = !row_absolute;
+  if (col_rel)
+    *col_rel = !col_absolute;
+
+  return 0;
+}
+
+void encode_cell(struct pkt *pkt, const char *data, int class)
+{
+  int row, col, c_rel, r_rel;
+
+  if (parse_A1(data, &row, &col, &r_rel, &c_rel) == -1)
+    return;
+
+  row |= c_rel << 14;
+  row |= r_rel << 15;
+  pkt_add8(pkt, 0x44);  /* RefV */
+  pkt_add16_le(pkt, row);
+  pkt_add8(pkt, col);
+#if 0
+  col |= c_rel << 14;
+  col |= r_rel << 15;
+
+  pkt_add8(pkt, 0x44);  /* RefV */
+  pkt_add16_le(pkt, row);
+  pkt_add16_le(pkt, col);
+#endif
+
 }
 
 void encode_function(struct pkt *pkt, const char *data, const int argc)
@@ -289,13 +381,18 @@ void encode_function(struct pkt *pkt, const char *data, const int argc)
   }
 
   if (biff5_funcs[i].argc >= 0) {
-    pkt_add8(pkt, 0x41);
+    pkt_add8(pkt, 0x41); /* tFuncV */
   } else {
-    pkt_add8(pkt, 0x42);
+    pkt_add8(pkt, 0x42); /* tFuncVarV */
     pkt_add8(pkt, argc);
   }
   pkt_add16_le(pkt, biff5_funcs[i].code);
 }
+
+struct func_stack {
+  int argc;
+  int class;
+};
 
 /* Based on code from:
  * http://en.wikipedia.org/wiki/Shunting-yard_algorithm */
@@ -303,27 +400,33 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
 {
   struct token *token;
   struct token *stack[32];
-  int func_argc[32]; /* Record arg counts of functions */
-  unsigned int fl;  /* Function length */
   unsigned int sl;  /* Stack length */
+  struct func_stack func_stack[32]; /* Function stack */
+  unsigned int fl;  /* Function length */
   struct token *sctoken;
 
   sl = 0;
   fl = 0;
-  func_argc[fl] = 0;
+  func_stack[fl].argc = 0;
+  func_stack[fl].class = 1;
   /* Process one token at a time */
   TAILQ_FOREACH(token, tlist, tokens) {
     /* if it's a number encode it right away */
     if (token->type == TOKEN_NUMBER) {
       encode_number(pkt, token->data);
-      func_argc[fl]++;
+      func_stack[fl].argc++;
+    }
+    else if (token->type == TOKEN_CELL) {
+      encode_cell(pkt, token->data, func_stack[fl].class);
+      func_stack[fl].argc++;
     }
     /* If it's a function push it onto the stack */
     else if (token->type == TOKEN_FUNCTION) {
       stack[sl] = token;
       ++sl;
+      func_stack[fl].argc++;
       fl++;
-      func_argc[fl] = 0;
+      func_stack[fl].argc = 0;
     } else if (token->type == TOKEN_OPERATOR) {
       while (sl > 0) {
         sctoken = stack[sl - 1];
@@ -364,9 +467,11 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
           break;
         }
         else  {
-          printf("Need to encode for function!\n");
-//          *outpos = sc;
-  //        ++outpos;
+          if (sctoken->type == TOKEN_OPERATOR) {
+            encode_operator(pkt, sctoken->data[0]);
+          } else {
+            printf("Need to encode for unknown token!\n");
+          }
           sl--;
         }
       }
@@ -383,10 +488,8 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
       if (sl > 0) {
         sctoken = stack[sl - 1];
         if (sctoken->type == TOKEN_FUNCTION) {
-          printf("Arg count for function: %d\n", func_argc[fl]);
-          encode_function(pkt, sctoken->data, func_argc[fl]);
-          //*outpos = sc;·
-          //++outpos;
+          printf("Arg count for function: %d\n", func_stack[fl].argc);
+          encode_function(pkt, sctoken->data, func_stack[fl].argc);
           sl--;
           fl--;
         }
@@ -406,6 +509,8 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
       encode_number(pkt, token->data);
     } else if (sctoken->type == TOKEN_OPERATOR) {
       encode_operator(pkt, sctoken->data[0]);
+    } else {
+      printf("There's still something to encode\n");
     }
     --sl;
   }
