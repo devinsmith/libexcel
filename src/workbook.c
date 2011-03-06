@@ -117,7 +117,7 @@ struct wsheetctx * wbook_addworksheet(struct wbookctx *wbook, char *sname)
     int len = strlen(wbook->sheetname) + 20;
 
     name = malloc(len);
-    snprintf(name, len, "%s%d", wbook->sheetname, index);
+    snprintf(name, len, "%s%d", wbook->sheetname, index + 1);
   }
 
   if (wbook->sheets == NULL)
