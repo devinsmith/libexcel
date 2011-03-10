@@ -449,6 +449,10 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
       /* Push operator onto the stack */
       stack[sl] = token;
       ++sl;
+      /* When we encounter an operator, we can subtract 1 from the argument
+       * count of the current function because (almost always?) the next
+       * token is an operand and shouldn't count towards the argument count. */
+      func_stack[fl].argc--;
     }
     /* If the token is a left parenthesis, then push it onto the stack. */
     else if (token->type == TOKEN_LPAREN) {
@@ -488,7 +492,9 @@ int parse_token_list(struct token_list *tlist, struct pkt *pkt)
       if (sl > 0) {
         sctoken = stack[sl - 1];
         if (sctoken->type == TOKEN_FUNCTION) {
+#ifdef FORMULA_DEBUG
           printf("Arg count for function: %d\n", func_stack[fl].argc);
+#endif
           encode_function(pkt, sctoken->data, func_stack[fl].argc);
           sl--;
           fl--;
