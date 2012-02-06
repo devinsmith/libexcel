@@ -6,3 +6,4 @@ Spreadsheet-WriteExcel module.
 The packet stream code is Copyright (C) 2003-2005, Claudio Leite and from the
 bsflite AIM client.
 
+MSVC patches from Wei Mingzhi.
