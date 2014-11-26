@@ -22,10 +22,12 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "io_handler.h"
 
 struct owctx {
   char *olefilename;
-  FILE *filehandle;
+  struct xl_io_handler io_handler;
+  void* io_handle;
   int fileclosed;
   int biff_only;
   int size_allowed;
@@ -38,6 +40,7 @@ struct owctx {
 };
 
 struct owctx * ow_new(char *filename);
+struct owctx * ow_new_ex(struct xl_io_handler io_handler, char *filename);
 void ow_destroy(struct owctx *ow);
 int ow_set_size(struct owctx *ow, int biffsize);
 void ow_write_header(struct owctx *ow);
