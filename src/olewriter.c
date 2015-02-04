@@ -22,8 +22,9 @@
 
 #include "olewriter.h"
 #include "stream.h"
+#include "io_handler.h"
 
-int ow_init(struct owctx *ow, char *filename);
+int ow_init(struct owctx *ow, struct xl_io_handler io_handler, char *filename);
 void ow_write_pps(struct owctx *ow, char *name, int pps_type, int pps_dir, int pps_start, int pps_size);
 void ow_write_property_storage(struct owctx *ow);
 void ow_write_padding(struct owctx *ow);
@@ -31,11 +32,16 @@ void ow_write_big_block_depot(struct owctx *ow);
 
 struct owctx * ow_new(char *filename)
 {
+  return ow_new_ex(xl_file_handler,filename);
+}
+
+struct owctx * ow_new_ex(struct xl_io_handler io_handler, char *filename)
+{
   struct owctx *ow;
 
   ow = malloc(sizeof(struct owctx));
 
-  if (ow_init(ow, filename) == -1) {
+  if (ow_init(ow, io_handler, filename) == -1) {
     free(ow);
     return NULL;
   }
@@ -50,12 +56,13 @@ void ow_destroy(struct owctx *ow)
   free(ow);
 }
 
-int ow_init(struct owctx *ow, char *filename)
+int ow_init(struct owctx *ow, struct xl_io_handler io_handler, char *filename)
 {
-  FILE *fp;
+  void *fp;
 
   ow->olefilename = filename;
-  ow->filehandle = NULL;
+  ow->io_handler = io_handler;
+  ow->io_handle = NULL;
   ow->fileclosed = 0;
   ow->biff_only = 0;
   ow->size_allowed = 0;
@@ -69,12 +76,16 @@ int ow_init(struct owctx *ow, char *filename)
   if (filename == NULL)
     return -1;
 
+  if (!ow->io_handler.create) return -1;
+  if (!ow->io_handler.write) return -1;
+  if (!ow->io_handler.close) return -1;
+
   /* Open file for writing */
-  fp = fopen(filename, "wb");
+  fp = ow->io_handler.create(filename);
   if (fp == NULL)
     return -1;
 
-  ow->filehandle = fp;
+  ow->io_handle = fp;
 
   return 0;
 }
@@ -185,7 +196,8 @@ void ow_write_header(struct owctx *ow)
     pkt_add32_le(pkt, -1); /* Unused */
   }
 
-  fwrite(pkt->data, 1, pkt->len, ow->filehandle);
+  ow->io_handler.write(ow->io_handle,pkt->data, pkt->len);
+
   pkt_free(pkt);
 }
 
@@ -206,7 +218,7 @@ void ow_close(struct owctx *ow)
     ow_write_property_storage(ow);
     ow_write_big_block_depot(ow);
   }
-  fclose(ow->filehandle);
+  ow->io_handler.close(ow->io_handle);
   ow->fileclosed = 1;
 }
 
@@ -217,7 +229,7 @@ void ow_close(struct owctx *ow)
  */
 void ow_write(struct owctx *ow, void *data, size_t len)
 {
-  fwrite(data, 1, len, ow->filehandle);
+  ow->io_handler.write(ow->io_handle, data, len);
 }
 
 /****************************************************************************
@@ -251,7 +263,8 @@ void ow_write_big_block_depot(struct owctx *ow)
     pkt_add32_le(pkt, -1);
   }
 
-  fwrite(pkt->data, 1, pkt->len, ow->filehandle);
+  ow->io_handler.write(ow->io_handle,pkt->data, pkt->len);
+
   pkt_free(pkt);
 }
 
@@ -318,7 +331,8 @@ void ow_write_pps(struct owctx *ow, char *name, int pps_type, int pps_dir, int p
   pkt_add32_le(pkt, pps_size); /* pps_size 0x78 */
   pkt_add32_le(pkt, 0);  /* unknown  0x7C */
 
-  fwrite(pkt->data, 1, pkt->len, ow->filehandle);
+  ow->io_handler.write(ow->io_handle,pkt->data, pkt->len);
+
   pkt_free(pkt);
 }
 
@@ -344,7 +358,7 @@ void ow_write_padding(struct owctx *ow)
 
     buffer = malloc(padding);
     memset(buffer, 0, padding);
-    fwrite(buffer, 1, padding, ow->filehandle);
+    ow->io_handler.write(ow->io_handle, buffer, padding);
     free(buffer);
   }
 }

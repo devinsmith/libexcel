@@ -26,6 +26,7 @@
 #include "olewriter.h"
 #include "worksheet.h"
 #include "bsdqueue.h"
+#include "io_handler.h"
 
 struct wbookctx {
   struct bwctx *biff;
@@ -51,6 +52,7 @@ struct wbookctx {
 };
 
 struct wbookctx *wbook_new(char *filename, int store_in_memory);
+struct wbookctx *wbook_new_ex(struct xl_io_handler io_handler, char *filename, int store_in_memory);
 void wbook_close(struct wbookctx *wb);
 void wbook_destroy(struct wbookctx *wb);
 struct wsheetctx *wbook_addworksheet(struct wbookctx *wbook, char *sname);

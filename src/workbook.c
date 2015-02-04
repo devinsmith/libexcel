@@ -37,11 +37,16 @@ void wbook_store_all_num_formats(struct wbookctx *wbook);
 
 struct wbookctx *wbook_new(char *filename, int store_in_memory)
 {
+	return wbook_new_ex(xl_file_handler, filename, store_in_memory);
+}
+
+struct wbookctx *wbook_new_ex(struct xl_io_handler io_handler, char *filename, int store_in_memory)
+{
   struct wbookctx *wbook;
 
   wbook = malloc(sizeof(struct wbookctx));
   wbook->biff = bw_new();
-  wbook->OLEwriter = ow_new(filename);
+  wbook->OLEwriter = ow_new_ex(io_handler,filename);
   if (wbook->OLEwriter == NULL) {
     free(wbook);
     return NULL;
