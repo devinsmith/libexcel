@@ -99,11 +99,16 @@ void wbook_destroy(struct wbookctx *wbook)
 
   /* Delete all formats */
   for (i = 0; i < wbook->formatcount; i++) {
-    free(wbook->formats[i]);
+    //free(wbook->formats[i]);
+	fmt_destroy(wbook->formats[i]);
   }
 
   fmt_destroy(wbook->tmp_format);
+  ow_destroy(wbook->OLEwriter);
+  bw_destroy(wbook->biff);
+
   free(wbook->sheets);
+  free(wbook->formats);
   free(wbook);
 }
 
@@ -111,6 +116,7 @@ struct wsheetctx * wbook_addworksheet(struct wbookctx *wbook, char *sname)
 {
   char *name = sname;
   int index;
+  int malloc_flag = 0;
   struct wsheetctx *wsheet;
 
   if (name && strlen(name) > 31)
@@ -123,6 +129,7 @@ struct wsheetctx * wbook_addworksheet(struct wbookctx *wbook, char *sname)
 
     name = malloc(len);
     snprintf(name, len, "%s%d", wbook->sheetname, index + 1);
+	malloc_flag = 1;
   }
 
   if (wbook->sheets == NULL)
@@ -134,6 +141,10 @@ struct wsheetctx * wbook_addworksheet(struct wbookctx *wbook, char *sname)
       wbook->url_format, wbook->store_in_memory);
   wbook->sheets[index] = wsheet;
   wbook->sheetcount++;
+
+  if (malloc_flag == 1) {
+	free(name);
+  }
 
   return wsheet;
 }

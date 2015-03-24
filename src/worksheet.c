@@ -115,6 +115,9 @@ void wsheet_destroy(struct wsheetctx *xls)
 
   /* Free up anything else that was allocated */
   free(xls->name);
+  if (xls->fp) {
+	  fclose(xls->fp);
+  }
   free(((struct bwctx *)xls)->data);
   free(xls);
 }
@@ -400,6 +403,7 @@ int wsheet_writef_formula(struct wsheetctx *xls, int row, int col, char *formula
 
   biff->append(biff, pkt->data, pkt->len);
   pkt_free(pkt);
+  pkt_free(formpkt);
 
   return 0;
 }
