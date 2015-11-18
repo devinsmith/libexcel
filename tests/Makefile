@@ -17,6 +17,12 @@ OBJS4 = $(SRCS4:.c=.o)
 CC = gcc
 AR = ar
 
+ifeq ($(OS),Windows_NT)
+	RM = del /Q /F
+else
+	RM = rm -f
+endif
+
 INTERNAL_CFLAGS = -Wall -I../include
 CPPFLAGS += -MMD -MP -MT $@
 CFLAGS= -O2 -pipe
@@ -30,21 +36,25 @@ EXES = $(EXE1) $(EXE2) $(EXE3) $(EXE4)
 
 all: $(EXES)
 
+debug: CPPFLAGS =
+debug: CFLAGS = -O0 -g
+debug: $(EXES)
+
 $(EXE1): $(OBJS1) ../src/libexcel.a
-	$(CC) -O2 -o $(EXE1) $(OBJS1) ../src/libexcel.a
+	$(CC) $(CFLAGS) -o $(EXE1) $(OBJS1) ../src/libexcel.a
 
 $(EXE2): $(OBJS2) ../src/libexcel.a
-	$(CC) -O2 -o $(EXE2) $(OBJS2) ../src/libexcel.a
+	$(CC) $(CFLAGS) -o $(EXE2) $(OBJS2) ../src/libexcel.a
 
 $(EXE3): $(OBJS3) ../src/libexcel.a
-	$(CC) -O2 -o $(EXE3) $(OBJS3) ../src/libexcel.a
+	$(CC) $(CFLAGS) -o $(EXE3) $(OBJS3) ../src/libexcel.a
 
 $(EXE4): $(OBJS4) ../src/libexcel.a
-	$(CC) -O2 -o $(EXE4) $(OBJS4) ../src/libexcel.a
+	$(CC) $(CFLAGS) -o $(EXE4) $(OBJS4) ../src/libexcel.a
 
 clean:
-	rm -f *.o $(EXES)
-	rm -f *.d
+	$(RM) *.o $(EXES)
+	$(RM) *.d
 
 .c.o:
 	$(CC) $(INTERNAL_CFLAGS) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
