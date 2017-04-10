@@ -51,8 +51,8 @@ struct wbookctx {
   struct xl_format **formats;
 };
 
-struct wbookctx *wbook_new(char *filename, int store_in_memory);
-struct wbookctx *wbook_new_ex(struct xl_io_handler io_handler, char *filename, int store_in_memory);
+struct wbookctx *wbook_new(const char *filename, int store_in_memory);
+struct wbookctx *wbook_new_ex(struct xl_io_handler io_handler, const char *filename, int store_in_memory);
 void wbook_close(struct wbookctx *wb);
 void wbook_destroy(struct wbookctx *wb);
 struct wsheetctx *wbook_addworksheet(struct wbookctx *wbook, char *sname);

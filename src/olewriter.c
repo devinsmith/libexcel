@@ -24,18 +24,18 @@
 #include "stream.h"
 #include "io_handler.h"
 
-int ow_init(struct owctx *ow, struct xl_io_handler io_handler, char *filename);
+int ow_init(struct owctx *ow, struct xl_io_handler io_handler, const char *filename);
 void ow_write_pps(struct owctx *ow, char *name, int pps_type, int pps_dir, int pps_start, int pps_size);
 void ow_write_property_storage(struct owctx *ow);
 void ow_write_padding(struct owctx *ow);
 void ow_write_big_block_depot(struct owctx *ow);
 
-struct owctx * ow_new(char *filename)
+struct owctx * ow_new(const char *filename)
 {
   return ow_new_ex(xl_file_handler,filename);
 }
 
-struct owctx * ow_new_ex(struct xl_io_handler io_handler, char *filename)
+struct owctx * ow_new_ex(struct xl_io_handler io_handler, const char *filename)
 {
   struct owctx *ow;
 
@@ -56,7 +56,7 @@ void ow_destroy(struct owctx *ow)
   free(ow);
 }
 
-int ow_init(struct owctx *ow, struct xl_io_handler io_handler, char *filename)
+int ow_init(struct owctx *ow, struct xl_io_handler io_handler, const char *filename)
 {
   void *fp;
 
