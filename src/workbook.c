@@ -35,12 +35,12 @@ static void wbook_store_num_format(struct wbookctx *wbook, char *format, int ind
 static void wbook_store_codepage(struct wbookctx *wbook);
 void wbook_store_all_num_formats(struct wbookctx *wbook);
 
-struct wbookctx *wbook_new(char *filename, int store_in_memory)
+struct wbookctx *wbook_new(const char *filename, int store_in_memory)
 {
 	return wbook_new_ex(xl_file_handler, filename, store_in_memory);
 }
 
-struct wbookctx *wbook_new_ex(struct xl_io_handler io_handler, char *filename, int store_in_memory)
+struct wbookctx *wbook_new_ex(struct xl_io_handler io_handler, const char *filename, int store_in_memory)
 {
   struct wbookctx *wbook;
 

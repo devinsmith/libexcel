@@ -25,7 +25,7 @@
 #include "io_handler.h"
 
 struct owctx {
-  char *olefilename;
+  const char *olefilename;
   struct xl_io_handler io_handler;
   void* io_handle;
   int fileclosed;
@@ -39,8 +39,8 @@ struct owctx {
   int block_count;
 };
 
-struct owctx * ow_new(char *filename);
-struct owctx * ow_new_ex(struct xl_io_handler io_handler, char *filename);
+struct owctx * ow_new(const char *filename);
+struct owctx * ow_new_ex(struct xl_io_handler io_handler, const char *filename);
 void ow_destroy(struct owctx *ow);
 int ow_set_size(struct owctx *ow, int biffsize);
 void ow_write_header(struct owctx *ow);
